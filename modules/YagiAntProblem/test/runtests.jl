@@ -13,13 +13,15 @@ function test()
     derivtreevis(ind.derivtree, "treevis")
     expr = get_expr(ind.derivtree)
     f = open("test.nec","w")
-    fitness = nec_run(problem, expr, f) do nec
-        #for now... look at impedance
-        result_index = 0
-        z = Complex(nec_impedance_real(nec,result_index), nec_impedance_imag(nec,result_index))
-        abs(z) #magnitude 
+    (gain, Z) = nec_run(problem, expr, f) do nec
+        gain = nec_gain(nec, 0, 0, 0)
+        imp_re = nec_impedance_real(nec, 0)
+        imp_im = nec_impedance_imag(nec, 0)
+        Z = Complex(imp_re, imp_im)
+        (gain, Z) 
     end
     close(f)
-    fitness
+    Z0 = Complex(50.0, 0.0)
+    (gain, vswr(Z, Z0))
 end
 
