@@ -4,11 +4,11 @@ Yagi-like antenna fitting inside a Bott's dot
 module YagiAntProblem
 
 export YagiAnt, create_grammar, get_grammar, get_fitness, 
-    OutOfBoundsException
+    OutOfBoundsException, nec_run
 
 using ExprSearch, DerivationTrees
 import ExprSearch: ExprProblem, get_fitness, get_grammar
-using RLESUtils, Interpreter
+using RLESUtils, Interpreter, LogSystems
 using NECPP
 
 #all measurements in meters
@@ -175,7 +175,24 @@ function ExprSearch.get_fitness(problem::YagiAnt, derivtree::DerivationTree,
     expr = get_expr(derivtree)
 
     #call nec on expr here
-    nec = nec_create()
+    fitness = nec_run(expr) do nec
+        #for now... look at impedance
+        result_index = 0
+        z = Complex(nec_impedance_real(nec,result_index), nec_impedance_imag(nec,result_index))
+        abs(z) #magnitude 
+    end
+    fitness
+end
+
+nec_run(f::Function, problem::YagiAnt, expr, io::IO) = nec_run(f, problem, expr, Nullable{IO}(io))
+function nec_run(f::Function, problem::YagiAnt, expr, io::Nullable{IO}=Nullable{IO}())
+    if !isnull(io)
+        logsys = NECPP.logsystem()
+        send_to!(get(io), logsys, "nec_cards", first)
+        nec = nec_create(logsys)
+    else
+        nec = nec_create()
+    end
     eval_expr(problem, expr, nec)
     handle_nec(nec_geometry_complete(nec, 1))
 
@@ -191,14 +208,10 @@ function ExprSearch.get_fitness(problem::YagiAnt, derivtree::DerivationTree,
     handle_nec(nec_gn_card(nec, 1, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
     handle_nec(nec_rp_card(nec, 0, 90, 1, 0, 5, 0, 0, 0.0, 90.0, 1.0, 0.0, 0.0, 0.0))
 
-    #for now... look at impedance
-    result_index = 0
-    z = Complex(nec_impedance_real(nec,result_index), nec_impedance_imag(nec,result_index))
-    fitness = abs(z) #magnitude 
-
+    result = f(nec)
     nec_delete(nec)
 
-    fitness
+    result
 end
 
 end #module
