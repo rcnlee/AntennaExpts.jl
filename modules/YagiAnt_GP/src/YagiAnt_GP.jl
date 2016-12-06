@@ -53,9 +53,25 @@ function yagiant_gp(; outdir::AbstractString=joinpath(RESULTDIR, "YagiAnt_GP"),
     save_log(outfile, logs)
 
     if vis
+        #visualize the deriv tree
         derivtreevis(get_derivtree(result), joinpath(outdir, "$(logfileroot)_derivtreevis"))
+
+        #output the nec file
+        f = open("result.nec", "w")
+        (gain, swr) = nec_run(problem, result.expr, f) do nec
+            gain = nec_gain(nec, 0, 0, 0)
+            imp_re = nec_impedance_real(nec, 0)
+            imp_im = nec_impedance_imag(nec, 0)
+            Z = Complex(imp_re, imp_im)
+            Z0 = Complex(50.0, 0.0)
+            swr = vswr(Z, Z0)
+            (gain, swr) 
+        end
+        close(f)
+        @show (gain, swr)
     end
     @show result.expr
+    
     return result
 end
 
