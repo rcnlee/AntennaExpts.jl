@@ -18,15 +18,15 @@ const MAXLENGTH = 0.12
 const MAXWIDTH = 0.11
 const HEIGHT = 0.02 #fixed height
 
-const WIRE_RADIUS = 0.0005 #meters
+const WIRE_RADIUS = 0.0002 #meters
 const FREQ_MHZ = 915.0 #MHz
 const LAMBDA = 299.79 / FREQ_MHZ
-const SEG_RATIO = 11 / (LAMBDA / 2)
+const SEG_RATIO = 27 / (LAMBDA / 2)
 const EXTYPE = 0 #0=voltage source
 const ROUND_DIGITS = 5
 
-const WXTOL = 0.02 #buffer space around wx
-const TOL = 0.005 #min dist between two wires
+const WXTOL = 0.04 #buffer space around wx
+const TOL = 0.01 #min dist between two wires
 const WIRE_LEN_TOL = 0.2 #antenna length tolerance from lambda/2
 const WIRE_LEN_MIN = (1.0 - WIRE_LEN_TOL) * LAMBDA / 2
 const WIRE_LEN_MAX = (1.0 + WIRE_LEN_TOL) * LAMBDA / 2 
@@ -145,8 +145,9 @@ function sym_bent_wire(nec::NecContext, tag_id_base::Int64, xpos::Float64,
         tag_id += 1 
         xw1 = xpos
         yw1 = y 
-        xlen = (total_len - width)/2 
+        xlen = (total_len - width)/2
         xw2 = up ? xpos + xlen : xpos - xlen
+        xw2 = round(xw2, ROUND_DIGITS)
         yw2 = y
         segment_count = round_nearest_odd(xlen * SEG_RATIO)
         check_boundaries([xw1, xw2], 0.0, MAXLENGTH)
@@ -159,6 +160,7 @@ end
 function check_boundaries(xs::Vector{Float64}, xmin::Float64, xmax::Float64)
     for x in xs
         if x < xmin || x > xmax
+            println("$x is outisde of ($xmin, $xmax)") 
             throw(OutOfBoundsException())
         end
     end
@@ -185,27 +187,34 @@ function ExprSearch.get_fitness(problem::YagiAnt, derivtree::DerivationTree,
     userargs::SymbolTable)
 
     expr = get_expr(derivtree)
-    fitness = nec_run(problem, expr) do nec
+    f = open("antenna.nec","w")
+    fitness = nec_run(problem, expr, f) do nec
         gain = nec_gain(nec, 0, 0, 0)
         imp_re = nec_impedance_real(nec, 0)
         imp_im = nec_impedance_imag(nec, 0)
         Z = Complex(imp_re, imp_im)
-        gain + vswr_metric(vswr(Z, problem.Z0))
+        #@show gain
+        #@show Z
+        #@show vswr(Z, problem.Z0)
+        -gain + vswr_metric(vswr(Z, problem.Z0))
     end
+    close(f)
     fitness
 end
 
 #vswr_metric(x::Float64) = 10.0 / (1+e^-(2x-5))
 function vswr_metric(x::Float64) 
-    #passes through (0,0), (1.5,0.5), (3,10)
+    #passes through (0,0), (1.5,0.5), (3,100)
     if 0.0 <= x <= 1.5
         return x / 3
     elseif 1.5 < x <= 3.0
-        return 6.3333x - 9.0
+        return 66.3333x - 99.0
     elseif 3.0 < x
-        return 10.0
+        return 100.0
     else
-        throw(DomainError("vswr cannot be negative!"))
+        println("vswr cannot be negative! $x")
+        #throw(DomainError())
+        return 100.0
     end
 end
 
@@ -231,7 +240,7 @@ function nec_run(f::Function, problem::YagiAnt, expr, io::Nullable{IO}=Nullable{
 
     handle_nec(nec_fr_card(nec, 0, 1, FREQ_MHZ, 0.0))
     handle_nec(nec_gn_card(nec, 1, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0))
-    handle_nec(nec_rp_card(nec, 0, 1, 1, 0, 5, 0, 0, 90.0-problem.departure_angle, 0.0, 
+    handle_nec(nec_rp_card(nec, 0, 1, 1, 1, 5, 0, 0, (90.0-problem.departure_angle), 0.0, 
         0.0, 0.0, 0.0, 0.0))
 
     result = f(nec)

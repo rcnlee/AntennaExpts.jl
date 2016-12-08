@@ -7,6 +7,7 @@ export yagiant_gp
 
 using ExprSearch, YagiAntProblem, DerivTreeVis
 using ExprSearch.GP
+using NECPP
 using RLESUtils, LogSystems, Loggers
 
 const DIR = dirname(@__FILE__)
@@ -20,10 +21,10 @@ function yagiant_gp(; outdir::AbstractString=joinpath(RESULTDIR, "YagiAnt_GP"),
                      seed=1,
                      logfileroot::AbstractString="yagiant_gp_log",
 
-                     pop_size::Int64=1000,
+                     pop_size::Int64=10000,
                      maxdepth::Int64=10,
                      iterations::Int64=10,
-                     tournament_size::Int64=20,
+                     tournament_size::Int64=500,
                      top_keep::Float64=0.01,
                      crossover_frac::Float64=0.4,
                      mutate_frac::Float64=0.2,
