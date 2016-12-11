@@ -5,6 +5,7 @@ module YagiAntProblem
 
 export YagiAnt, create_grammar, get_grammar, get_fitness, 
     OutOfBoundsException, nec_run
+export expr_fitness
 
 using ExprSearch, DerivationTrees
 import ExprSearch: ExprProblem, get_fitness, get_grammar
@@ -54,6 +55,7 @@ function create_grammar()
         assign_drv = Expr(:(=), :lxwx, drv_el)
         drv_el = Expr(:call, :drv_wire, :nec, rn, rn)
         dir_el = dir_case2a | dir_case2b
+
         dir_case2a = Expr(:call, :dir_wire_2a, :nec, :lxwx, rn, rn, rn)
         dir_case2b = Expr(:call, :dir_wire_2b, :nec, :lxwx, rn, rn, rn)
         rn[divconst] = 0:100 #fraction of some length
@@ -187,20 +189,40 @@ function ExprSearch.get_fitness(problem::YagiAnt, derivtree::DerivationTree,
     userargs::SymbolTable)
 
     expr = get_expr(derivtree)
-    f = open("antenna.nec","w")
-    fitness = nec_run(problem, expr, f) do nec
+
+    #####################################
+    # debug
+    #f = open("antenna.nec","w")
+    #fitness = nec_run(problem, expr, f) do nec
+        #gain = nec_gain(nec, 0, 0, 0)
+        #imp_re = nec_impedance_real(nec, 0)
+        #imp_im = nec_impedance_imag(nec, 0)
+        #Z = Complex(imp_re, imp_im)
+        #@show gain
+        #@show Z
+        #@show vswr(Z, problem.Z0)
+        #-gain + vswr_metric(vswr(Z, problem.Z0))
+    #end
+    #close(f)
+    #####################################
+    #deploy
+    fitness = expr_fitness(problem, expr)
+    ####################################
+
+    fitness
+end
+
+function expr_fitness(problem::YagiAnt, expr)
+    fitness = nec_run(problem, expr) do nec
         gain = nec_gain(nec, 0, 0, 0)
         imp_re = nec_impedance_real(nec, 0)
         imp_im = nec_impedance_imag(nec, 0)
         Z = Complex(imp_re, imp_im)
-        #@show gain
-        #@show Z
-        #@show vswr(Z, problem.Z0)
         -gain + vswr_metric(vswr(Z, problem.Z0))
     end
-    close(f)
     fitness
 end
+
 
 #vswr_metric(x::Float64) = 10.0 / (1+e^-(2x-5))
 function vswr_metric(x::Float64) 
@@ -212,7 +234,7 @@ function vswr_metric(x::Float64)
     elseif 3.0 < x
         return 100.0
     else
-        println("vswr cannot be negative! $x")
+        ##println("vswr cannot be negative! $x")
         #throw(DomainError())
         return 100.0
     end
