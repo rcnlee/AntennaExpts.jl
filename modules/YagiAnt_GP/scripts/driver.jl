@@ -70,4 +70,4 @@ end
     expr_fitness(problem, expr)
 end
 
-yagiant_gp(; seed=2, pop_size=10000, tournament_size=1000, iterations=20)
+yagiant_gp(; seed=1, pop_size=10000, tournament_size=1000, iterations=10)
