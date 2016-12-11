@@ -1,4 +1,6 @@
-using AntennaExpts, YagiAntProblem, YagiAnt_GP
+@everywhere using AntennaExpts
+@everywhere using YagiAntProblem
+using YagiAnt_GP
 using ExprSearch
 using ExprSearch.GP
 
@@ -62,7 +64,6 @@ function asyncdriver(pop::GPPopulation, result::GPESResult)
     end
 end
 
-@everywhere using YagiAntProblem
 @everywhere problem = YagiAnt()
 @everywhere worker_expr_fitness(expr) = begin 
     #println("myid=", myid()) 
