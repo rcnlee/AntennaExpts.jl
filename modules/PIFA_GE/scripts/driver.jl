@@ -1,11 +1,11 @@
 @everywhere using AntennaExpts
-@everywhere using YagiAntProblem
-using YagiAnt_GP
+@everywhere using PIFAProblem
+using PIFA_GE
 using ExprSearch
-using ExprSearch.GP
+using ExprSearch.GE
 
-function ExprSearch.GP.evaluate!(p::GPESParams, pop::GPPopulation, result::GPESResult, 
-    problem::YagiAnt, default_expr)
+function ExprSearch.GE.evaluate!(p::GEESParams, pop::GEPopulation, result::GEESResult, 
+    problem::PIFAAnt, default_expr)
     #first convert all derivtrees to exprs
     for ind in pop
         if isnull(ind.fitness)
@@ -23,7 +23,7 @@ function ExprSearch.GP.evaluate!(p::GPESParams, pop::GPPopulation, result::GPESR
     asyncdriver(pop, result)
 end
 
-function asyncdriver(pop::GPPopulation, result::GPESResult)
+function asyncdriver(pop::GEPopulation, result::GEESResult)
     np = nprocs()  # determine the number of processes available
     n = length(pop)
     i = 1
@@ -70,4 +70,4 @@ end
     expr_fitness(problem, expr)
 end
 
-yagiant_gp(; seed=1, pop_size=20000, tournament_size=4000, iterations=20, top_keep=0.0)
+pifa_ge(; seed=1, pop_size=20000, tournament_size=4000, iterations=20, top_keep=0.0)

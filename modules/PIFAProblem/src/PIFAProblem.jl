@@ -1,9 +1,9 @@
 """
-Yagi-like antenna fitting inside a Bott's dot
+Four PIFA antennas fitting inside a Bott's dot
 """
-module YagiAntProblem
+module PIFAProblem
 
-export YagiAnt, create_grammar, get_grammar, get_fitness, 
+export PIFAAnt, create_grammar, get_grammar, get_fitness, 
     OutOfBoundsException, nec_run
 export expr_fitness
 
@@ -37,16 +37,16 @@ const DIVCONST = 100.0
 
 immutable OutOfBoundsException <: Exception end
 
-type YagiAnt <: ExprProblem
+type PIFAAnt <: ExprProblem
     departure_angle::Float64 #degrees rel horizontal
     grammar::Grammar
     Z0::Complex
 end
 
-function YagiAnt(departure_angle::Float64=10.0, 
+function PIFAAnt(departure_angle::Float64=10.0, 
     Z0::Complex=Complex(50.0, 0.0))
     grammar = create_grammar()
-    YagiAnt(departure_angle, grammar, Z0)
+    PIFAAnt(departure_angle, grammar, Z0)
 end
 
 function create_grammar()
@@ -72,9 +72,11 @@ function rand_and_round(r::Float64, xmin::Float64, xmax::Float64, n_digits::Int6
     round(x, n_digits)
 end
 
+make_block(lst::Array) = Expr(:block, lst...)
+divconst(x) = x / DIVCONST
+
 ###
 #functions for grammar
-make_block(lst::Array) = Expr(:block, lst...)
 
 function drv_wire(nec::NecContext, rn_tl::Float64, rn_w::Float64, rn_height1::Float64,
     rn_height2::Float64)
@@ -175,8 +177,6 @@ function check_boundaries(xs::Vector{Float64}, xmin::Float64, xmax::Float64)
     end
 end
 
-divconst(x) = x / DIVCONST
-
 const SYMTABLE = SymbolTable(
     :make_block => make_block,
     :drv_wire => drv_wire,
@@ -185,14 +185,14 @@ const SYMTABLE = SymbolTable(
     :divconst => divconst
     )
 
-function eval_expr(problem::YagiAnt, expr, nec) 
+function eval_expr(problem::PIFAAnt, expr, nec) 
     SYMTABLE[:nec] = nec
     interpret(SYMTABLE, expr)
 end
 
-ExprSearch.get_grammar(problem::YagiAnt) = problem.grammar
+ExprSearch.get_grammar(problem::PIFAAnt) = problem.grammar
 
-function ExprSearch.get_fitness(problem::YagiAnt, derivtree::DerivationTree, 
+function ExprSearch.get_fitness(problem::PIFAAnt, derivtree::DerivationTree, 
     userargs::SymbolTable)
 
     expr = get_expr(derivtree)
@@ -219,7 +219,7 @@ function ExprSearch.get_fitness(problem::YagiAnt, derivtree::DerivationTree,
     fitness
 end
 
-function expr_fitness(problem::YagiAnt, expr)
+function expr_fitness(problem::PIFAAnt, expr)
     fitness = nec_run(problem, expr) do nec
         gain = nec_gain(nec, 0, 0, 0)
         imp_re = nec_impedance_real(nec, 0)
@@ -247,8 +247,8 @@ function vswr_metric(x::Float64)
     end
 end
 
-nec_run(f::Function, problem::YagiAnt, expr, io::IO) = nec_run(f, problem, expr, Nullable{IO}(io))
-function nec_run(f::Function, problem::YagiAnt, expr, io::Nullable{IO}=Nullable{IO}())
+nec_run(f::Function, problem::PIFAAnt, expr, io::IO) = nec_run(f, problem, expr, Nullable{IO}(io))
+function nec_run(f::Function, problem::PIFAAnt, expr, io::Nullable{IO}=Nullable{IO}())
     if !isnull(io)
         logsys = NECPP.logsystem()
         send_to!(get(io), logsys, "nec_cards", first)
